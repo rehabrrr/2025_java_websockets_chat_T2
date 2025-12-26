@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: webchat
+  profiles:
+    active: demo
+project:
+  version: @project.version@
+logging:
+  level:
+    com:
+      example:
+        webchat: INFO
+  file:
+    name: logs/app.log
