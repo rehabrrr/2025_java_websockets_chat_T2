@@ -23,13 +23,6 @@ http://localhost:8080/
 
 # Docker
 
-Dockerfile
-```
-FROM openjdk:17-jdk-slim
-VOLUME /tmp
-COPY target/webchat-0.0.1-SNAPSHOT.jar webchat.jar
-ENTRYPOINT ["java","-jar","/webchat.jar"]
-```
 Собрать Docker образ:
 ```
 docker build -t webchat .
