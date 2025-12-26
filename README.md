@@ -20,4 +20,4 @@ jdbc:h2:file:C:\путь к проекту\t2webchat;AUTO_SERVER=TRUE
 http://localhost:8080/
 ```
 
-<img src="https://raw.githubusercontent.com/rehabrrr/2025_php_yii_apples/10adcb247cf9cb5ea037ac33a67fdae963492bc0/screen1.png">
+<img src="https://raw.githubusercontent.com/rehabrrr/2025_java_websockets_chat_T2/10adcb247cf9cb5ea037ac33a67fdae963492bc0/screen1.png">
