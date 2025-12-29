@@ -1,8 +1,8 @@
 package com.example.webchat.api.rest.server;
 
-import com.example.webchat.model.dto.MessageResponseDto;
+import com.example.webchat.model.dto.webchat.ChatMessageResponseDto;
 import com.example.webchat.model.dto.common.PagedResponseDto;
-import com.example.webchat.services.MessageService;
+import com.example.webchat.services.ChatMessagesService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -14,17 +14,17 @@ import org.springframework.web.bind.annotation.RestController;
 
 @AllArgsConstructor
 @RestController
-@RequestMapping(value = "/api-${project.version}/messages", produces = MediaType.APPLICATION_JSON_VALUE)
-public class MessagesController {
+@RequestMapping(value = "/api-${project.version}/chat-messages", produces = MediaType.APPLICATION_JSON_VALUE)
+public class ChatMessagesController {
 
-    private MessageService messageService;
+    private ChatMessagesService chatMessagesService;
 
-    @GetMapping("/history")
+    @GetMapping("/history-tail")
     @ResponseStatus(HttpStatus.OK)
-    public PagedResponseDto<MessageResponseDto> messagesHistory(
+    public PagedResponseDto<ChatMessageResponseDto> messagesHistory(
             @RequestParam int page,
             @RequestParam int size
     ) {
-        return messageService.messagesHistory(page, size);
+        return chatMessagesService.messagesHistoryTail(page, size);
     }
 }

@@ -14,7 +14,7 @@ spring:
       mode:
       continue-on-error: false
   liquibase:
-    enabled: true
+    enabled: false
     change-log: classpath:/db-migrations/h2/init.yml
     database-change-log-lock-table: lb_databasechangeloglock
     database-change-log-table: lb_databasechangelog

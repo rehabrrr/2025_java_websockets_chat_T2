@@ -1,40 +1,43 @@
 package com.example.webchat.model.dao;
 
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
-import java.util.Set;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Data
 @Builder
-@Table(name = "users")
+@Table(name = "messages")
 @Entity
-public class UserDao {
+public class ChatMessageDao {
     @Id
     @ColumnDefault("gen_random_uuid()")
     @UuidGenerator
     private UUID id;
 
-    @Column(columnDefinition = "VARCHAR(100)", unique = true, nullable = false)
-    private String name;
+    @CreationTimestamp
+    private LocalDateTime dt;
 
-    @ToString.Exclude
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "user", cascade = CascadeType.ALL)
-    private Set<MessageDao> messages;
+    @Column(columnDefinition = "VARCHAR(500)")
+    private String content;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private ChatUserDao user;
 }

@@ -10,21 +10,34 @@
     <meta http-equiv="Pragma" content="no-cache"/>
 
     <style>
-        #page-container {
-            width: 700px;
-            margin-left: auto;
-            margin-right: auto;
+        .centered {
+            text-align: center;
+        }
+
+        .chat-blocks {
             border: 5px solid bisque;
             padding: 10px;
             border-radius: 10px;
+            float: left;
+        }
+
+        #page-container {
+            width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #users-container {
+            width: 150px;
+            margin-right: 10px;
+        }
+
+        #chat-container {
+            width: 600px;
         }
 
         #messages-container {
             display: none;
-        }
-
-        .centered {
-            text-align: center;
         }
 
         #messages-history div {
@@ -38,36 +51,67 @@
     <script src="/js/vendor/jquery-3.1.1.min.js"></script>
     <script src="/js/vendor/stomp.umd.min.js"></script>
 
-    <script src="/js/stomp-init.js"></script>
 </head>
 <body>
+
 <input type="hidden" id="user-name-stored"/>
+<input type="hidden" id="user-id-stored"/>
 <div id="page-container">
-    <div id="messages-container">
-        <div id="messages-history"></div>
-        <div class="centered">
-            Сообщение: <input type="text" id="message-content"/>
-            <input type="button" value="Отправить" id="message-send"/>
-        </div>
+    <div id="users-container" class="chat-blocks">
+        Пользователи
+        <hr/>
+        <div id="users-list"></div>
     </div>
-    <div class="centered" id="user-container">
-        Имя: <input type="text" id="user-name"/>
-        <input type="button" value="Войти" id="user-send"/>
+    <div id="chat-container" class="chat-blocks">
+        <div id="messages-container">
+            <div id="messages-history"></div>
+            <div class="centered">
+                Сообщение: <input type="text" id="message-content"/>
+                <input type="button" value="Отправить" id="message-send"/>
+            </div>
+        </div>
+        <div class="centered" id="user-container">
+            Имя: <input type="text" id="user-name"/>
+            <input type="button" value="Войти" id="user-send"/>
+        </div>
     </div>
 </div>
 
 <script type="text/javascript">
+    const API_VERSION_PATH = "/api-0.0.1-SNAPSHOT/";
+    const REFRESH_USER_TIME_INTERVAL = 30000;
+    const REFRESH_USER_TIME_EXPIRED = 40000;
+
+    var chatUsersCache = [];
+
+    const stompClient = new StompJs.Client({
+        brokerURL: "ws://localhost:8080" + API_VERSION_PATH + "webchat-endpoint"
+    });
+
+    stompClient.onWebSocketError = (error) => {
+        console.error("onWebSocketError: Error with websocket", error);
+    };
+
+    stompClient.onStompError = (frame) => {
+        console.error("onStompError: Broker reported error: " + frame.headers["message"]);
+        console.error("onStompError: Additional details: " + frame.body);
+    };
+
     stompClient.onConnect = (frame) => {
         console.log('Connected: ' + frame);
-        stompClient.subscribe("/topic/broadcasted-messages", (messageDto) => {
-            console.log(JSON.parse(messageDto.body));
+        stompClient.subscribe(API_VERSION_PATH + "topic/broadcasted-chat-messages", (messageDto) => {
+            // console.log(JSON.parse(messageDto.body));
             showMessage(JSON.parse(messageDto.body));
+        });
+        stompClient.subscribe(API_VERSION_PATH + "topic/broadcasted-chat-users", (userDto) => {
+            // console.log(JSON.parse(userDto.body));
+            showUser(JSON.parse(userDto.body));
         });
     };
     stompClient.activate();
 
     function getMessageHistory() {
-        fetch("/api-0.0.1-SNAPSHOT/messages/history?page=1&size=100")
+        fetch(API_VERSION_PATH + "chat-messages/history-tail?page=1&size=100")
             .then(pagedMessages => pagedMessages.json())
             .then(pagedMessagesData => {
                 pagedMessagesData.elements.forEach(showMessage);
@@ -75,8 +119,19 @@
     }
 
     function showMessage(messageDto) {
-        // console.log("***** messageDto = ", messageDto);
-        $("#messages-history").append("<div><em>" + messageDto.userName + ":</em><br/>" + messageDto.content + "</div>");
+        $("#messages-history").append("<div><em><b><u>" + messageDto.userName + "</u></b> (" + messageDto.dt + ") :</em><br/>" + messageDto.content + "</div>");
+    }
+
+    function showUser(userDto) {
+        if (chatUsersCache[userDto.userId]) {
+            clearTimeout(chatUsersCache[userDto.userId]);
+        }
+        chatUsersCache[userDto.userId] = setTimeout(() => {
+            $(userDto.userId).fadeOut(() => {$(userDto.userId).remove();});
+        }, REFRESH_USER_TIME_EXPIRED);
+        if (!$(userDto.userId)) {
+            $("#users-list").append("<div id='" + userDto.userId + "'><em><b><u>" + userDto.name + "</u></b></em></div>");
+        }
     }
 
     function switchControls() {
@@ -87,10 +142,19 @@
 
     function sendMessage() {
         stompClient.publish({
-            destination: "/app/send-message",
+            destination: API_VERSION_PATH + "app/send-message",
             body: JSON.stringify({
-                "userName": $("#user-name-stored").val(),
+                "userId": $("#user-id-stored").val(),
                 "content": $("#message-content").val()
+            })
+        });
+    }
+
+    function sendUser() {
+        stompClient.publish({
+            destination: API_VERSION_PATH + "app/refresh-user",
+            body: JSON.stringify({
+                "userId": $("#user-id-stored").val()
             })
         });
     }
@@ -98,7 +162,20 @@
     $(function () {
         $("#user-send").click(() => {
             $("#user-name-stored").val($("#user-name").val());
-            switchControls();
+            fetch(API_VERSION_PATH + "chat-users/create-if-not-exists", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({"name": $("#user-name-stored").val()})
+            })
+            .then(chatUserResponse => chatUserResponse.json())
+            .then(chatUserResponse => {
+                $("#user-id-stored").val(chatUserResponse.id)
+            })
+            .then(chatUserResponse => {
+                setInterval(() => sendUser());
+                switchControls();
+                sendUser();
+            }, REFRESH_USER_TIME_INTERVAL);
         });
         $("#message-send").click(() => {
             sendMessage();
