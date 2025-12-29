@@ -111,7 +111,7 @@
     stompClient.activate();
 
     function getMessageHistory() {
-        fetch(API_VERSION_PATH + "chat-messages/history-tail?page=1&size=100")
+        fetch(API_VERSION_PATH + "chat-messages/history-tail?page=0&size=100")
             .then(pagedMessages => pagedMessages.json())
             .then(pagedMessagesData => {
                 pagedMessagesData.elements.forEach(showMessage);
@@ -125,13 +125,16 @@
     function showUser(userDto) {
         if (chatUsersCache[userDto.userId]) {
             clearTimeout(chatUsersCache[userDto.userId]);
+        } else {
+            $("#users-list").append("<div id='" + userDto.userId + "'><em><b><u>" + userDto.name + "</u></b></em></div>");
         }
         chatUsersCache[userDto.userId] = setTimeout(() => {
             $(userDto.userId).fadeOut(() => {$(userDto.userId).remove();});
         }, REFRESH_USER_TIME_EXPIRED);
-        if (!$(userDto.userId)) {
+        /* console.log($(userDto.userId).length, userDto.userId)
+        if ($(userDto.userId).length === 0) {
             $("#users-list").append("<div id='" + userDto.userId + "'><em><b><u>" + userDto.name + "</u></b></em></div>");
-        }
+        } */
     }
 
     function switchControls() {
@@ -150,7 +153,7 @@
         });
     }
 
-    function sendUser() {
+    function refreshUser() {
         stompClient.publish({
             destination: API_VERSION_PATH + "app/refresh-user",
             body: JSON.stringify({
@@ -172,10 +175,11 @@
                 $("#user-id-stored").val(chatUserResponse.id)
             })
             .then(chatUserResponse => {
-                setInterval(() => sendUser());
+                setInterval(() => refreshUser(), REFRESH_USER_TIME_INTERVAL);
                 switchControls();
-                sendUser();
-            }, REFRESH_USER_TIME_INTERVAL);
+                getMessageHistory();
+                refreshUser();
+            });
         });
         $("#message-send").click(() => {
             sendMessage();
